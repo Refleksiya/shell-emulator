@@ -58,6 +58,14 @@ def load_vfs(path):
     return root
 
 
+def copy_node(node, name):
+    """Создаёт копию узла VFS с новым именем."""
+    copy = Node(name, node.is_dir, node.data)
+    for child in node.children.values():
+        copy.children[child.name] = copy_node(child, child.name)
+    return copy
+
+
 def walk_path(cwd, path):
     """Собирает список имён итогового пути с учётом . и .."""
     parts = [] if path.startswith("/") else list(cwd)

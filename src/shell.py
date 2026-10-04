@@ -5,7 +5,7 @@ import shlex
 import time
 
 from errors import ShellError
-from vfs import Node, ROOT_NAME, load_vfs, resolve
+from vfs import Node, ROOT_NAME, copy_node, load_vfs, resolve
 
 DEFAULT_VFS_NAME = "vfs"
 MAX_PATH_ARGS = 1
@@ -15,6 +15,8 @@ SYSTEM_VERSION = "1.0"
 MACHINE = "x86_64"
 SECONDS_IN_MINUTE = 60
 NAMES_SEPARATOR = "  "
+RECURSIVE_FLAG = "-r"
+CP_ARGS_COUNT = 2
 
 
 def parse(line):
@@ -62,6 +64,19 @@ def one_path(args, command):
     return args[0] if args else ""
 
 
+def split_flag(args, flag):
+    """Отделяет флаг от остальных аргументов."""
+    return flag in args, [arg for arg in args if arg != flag]
+
+
+def parent_path_of(path):
+    """Возвращает путь к родительскому каталогу и имя в конце пути."""
+    folder, _, name = path.rpartition("/")
+    if not folder:
+        folder = "/" if path.startswith("/") else "."
+    return folder, name
+
+
 class Shell:
     """Эмулятор оболочки: хранит состояние и выполняет команды."""
 
@@ -79,6 +94,8 @@ class Shell:
             "uname": self.cmd_uname,
             "echo": self.cmd_echo,
             "uptime": self.cmd_uptime,
+            "rm": self.cmd_rm,
+            "cp": self.cmd_cp,
             "exit": self.cmd_exit,
         }
 
@@ -140,6 +157,51 @@ class Shell:
         seconds = int(time.monotonic() - self.start_time)
         minutes = seconds // SECONDS_IN_MINUTE
         return f"время работы: {minutes} мин {seconds % SECONDS_IN_MINUTE} с"
+
+    def directory(self, path):
+        """Находит каталог по пути."""
+        node, _ = resolve(self.root, self.cwd, path)
+        if not node.is_dir:
+            raise ShellError(f"не является каталогом: {path}")
+        return node
+
+    def cmd_rm(self, args):
+        """Удаляет файл или каталог (с -r) в памяти."""
+        recursive, paths = split_flag(args, RECURSIVE_FLAG)
+        path = one_path(paths, "rm")
+        if not path:
+            raise ShellError("rm: не указан путь")
+        node, parts = resolve(self.root, self.cwd, path)
+        if not parts:
+            raise ShellError("rm: нельзя удалить корень VFS")
+        if node.is_dir and not recursive:
+            raise ShellError(f"rm: это каталог, нужен -r: {path}")
+        folder, name = parent_path_of(path)
+        del self.directory(folder).children[name or node.name]
+        return ""
+
+    def cmd_cp(self, args):
+        """Копирует файл или каталог (с -r) внутри памяти."""
+        recursive, paths = split_flag(args, RECURSIVE_FLAG)
+        if len(paths) != CP_ARGS_COUNT:
+            raise ShellError("cp: нужны источник и приёмник")
+        source, _ = resolve(self.root, self.cwd, paths[0])
+        if source.is_dir and not recursive:
+            raise ShellError(f"cp: это каталог, нужен -r: {paths[0]}")
+        folder, name = self.target_of(paths[1], source.name)
+        folder.children[name] = copy_node(source, name)
+        return ""
+
+    def target_of(self, path, default_name):
+        """Определяет каталог и имя, под которым сохранить копию."""
+        if path.endswith("/"):
+            return self.directory(path), default_name
+        folder, name = parent_path_of(path)
+        parent = self.directory(folder)
+        child = parent.children.get(name)
+        if child is not None and child.is_dir:
+            return child, default_name
+        return parent, name
 
     def cmd_exit(self, args):
         """Завершает работу эмулятора."""

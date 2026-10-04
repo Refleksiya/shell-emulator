@@ -1,0 +1,14 @@
+# Проверка команд этапа 5
+ls
+cp root.txt copy.txt
+ls
+cp root.txt docs
+ls docs
+cp -r docs backup
+ls backup
+rm copy.txt
+ls
+rm -r backup
+ls
+# дальше проверка ошибок: каталог без -r, скрипт остановится
+rm docs
