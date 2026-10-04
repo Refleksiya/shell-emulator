@@ -7,7 +7,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from shell import Shell, ShellError, parse  # noqa: E402
+from shell import (  # noqa: E402
+    Shell, ShellError, parse, read_script, vfs_name_from_path,
+)
+
+DATA = Path(__file__).parent / "data"
 
 
 class TestParse(unittest.TestCase):
@@ -26,6 +30,32 @@ class TestParse(unittest.TestCase):
         """Незакрытая кавычка — ошибка."""
         with self.assertRaises(ShellError):
             parse('ls "abc')
+
+    def test_comment(self):
+        """Всё после # отбрасывается."""
+        self.assertEqual(parse("ls a # коммент"), ["ls", "a"])
+
+
+class TestConfig(unittest.TestCase):
+    """Тесты параметров и стартового скрипта."""
+
+    def test_vfs_name_default(self):
+        """Без пути имя VFS по умолчанию."""
+        self.assertEqual(vfs_name_from_path(None), "vfs")
+
+    def test_vfs_name_from_path(self):
+        """Имя VFS берётся из пути."""
+        self.assertEqual(vfs_name_from_path("a/b/my.zip"), "my.zip")
+
+    def test_read_script(self):
+        """Комментарии и пустые строки пропускаются."""
+        lines = read_script(DATA / "script.txt")
+        self.assertEqual(lines, [(2, "ls -l"), (4, "cd home")])
+
+    def test_script_not_found(self):
+        """Несуществующий скрипт — ошибка."""
+        with self.assertRaises(ShellError):
+            read_script(DATA / "nope.txt")
 
 
 class TestShell(unittest.TestCase):
