@@ -1,0 +1,15 @@
+# Проверка команд этапа 4
+ls
+ls docs
+ls docs/reports
+cd docs/reports/2026
+ls
+cd ..
+cd /
+uname
+uname -a
+echo привет из эмулятора
+echo "строка в кавычках"
+uptime
+# дальше проверка ошибок: каталога нет, скрипт остановится
+cd nope

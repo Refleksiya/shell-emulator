@@ -65,18 +65,27 @@ class TestShell(unittest.TestCase):
         """Создаёт новую оболочку перед каждым тестом."""
         self.shell = Shell()
 
-    def test_ls_stub(self):
-        """ls выводит своё имя и аргументы."""
-        self.assertEqual(self.shell.execute("ls -l"), "ls, аргументы: ['-l']")
-
-    def test_cd_stub(self):
-        """cd выводит своё имя и аргументы."""
-        self.assertEqual(self.shell.execute("cd a"), "cd, аргументы: ['a']")
-
     def test_cd_too_many_args(self):
         """cd с двумя аргументами — ошибка."""
         with self.assertRaises(ShellError):
             self.shell.execute("cd a b")
+
+    def test_echo(self):
+        """echo выводит аргументы через пробел."""
+        self.assertEqual(self.shell.execute("echo раз два"), "раз два")
+
+    def test_uname(self):
+        """uname выводит имя системы."""
+        self.assertEqual(self.shell.execute("uname"), "EmulatorOS")
+
+    def test_uname_bad_arg(self):
+        """Неизвестный аргумент uname — ошибка."""
+        with self.assertRaises(ShellError):
+            self.shell.execute("uname -x")
+
+    def test_uptime(self):
+        """uptime сообщает время работы."""
+        self.assertIn("время работы", self.shell.execute("uptime"))
 
     def test_unknown_command(self):
         """Неизвестная команда — ошибка."""

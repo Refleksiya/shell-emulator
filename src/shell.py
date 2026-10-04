@@ -2,13 +2,19 @@
 
 import os
 import shlex
+import time
 
 from errors import ShellError
-from vfs import Node, ROOT_NAME, load_vfs
+from vfs import Node, ROOT_NAME, load_vfs, resolve
 
 DEFAULT_VFS_NAME = "vfs"
-MAX_CD_ARGS = 1
+MAX_PATH_ARGS = 1
 COMMENT = "#"
+SYSTEM_NAME = "EmulatorOS"
+SYSTEM_VERSION = "1.0"
+MACHINE = "x86_64"
+SECONDS_IN_MINUTE = 60
+NAMES_SEPARATOR = "  "
 
 
 def parse(line):
@@ -44,6 +50,18 @@ def read_script(path):
     return result
 
 
+def format_name(node):
+    """Имя узла для вывода: у папки в конце добавляется слеш."""
+    return node.name + "/" if node.is_dir else node.name
+
+
+def one_path(args, command):
+    """Возвращает путь из аргументов команды (не больше одного)."""
+    if len(args) > MAX_PATH_ARGS:
+        raise ShellError(f"{command}: слишком много аргументов")
+    return args[0] if args else ""
+
+
 class Shell:
     """Эмулятор оболочки: хранит состояние и выполняет команды."""
 
@@ -54,11 +72,19 @@ class Shell:
         self.root = Node(ROOT_NAME, True)
         self.cwd = []
         self.running = True
+        self.start_time = time.monotonic()
         self.commands = {
             "ls": self.cmd_ls,
             "cd": self.cmd_cd,
+            "uname": self.cmd_uname,
+            "echo": self.cmd_echo,
+            "uptime": self.cmd_uptime,
             "exit": self.cmd_exit,
         }
+
+    def prompt(self):
+        """Приглашение к вводу с текущим каталогом."""
+        return "/" + "/".join(self.cwd) + "$ "
 
     def load(self):
         """Загружает VFS в память. Возвращает сообщение о результате."""
@@ -78,14 +104,42 @@ class Shell:
         return self.commands[name](args)
 
     def cmd_ls(self, args):
-        """Заглушка ls: выводит имя команды и аргументы."""
-        return f"ls, аргументы: {args}"
+        """Выводит содержимое каталога или имя файла."""
+        path = one_path(args, "ls") or "."
+        node, _ = resolve(self.root, self.cwd, path)
+        if not node.is_dir:
+            return node.name
+        names = [format_name(child) for child in node.children.values()]
+        return NAMES_SEPARATOR.join(sorted(names))
 
     def cmd_cd(self, args):
-        """Заглушка cd: выводит имя команды и аргументы."""
-        if len(args) > MAX_CD_ARGS:
-            raise ShellError("cd: слишком много аргументов")
-        return f"cd, аргументы: {args}"
+        """Переходит в каталог VFS."""
+        path = one_path(args, "cd") or "/"
+        node, parts = resolve(self.root, self.cwd, path)
+        if not node.is_dir:
+            raise ShellError(f"cd: не является каталогом: {path}")
+        self.cwd = parts
+        return ""
+
+    def cmd_uname(self, args):
+        """Выводит сведения о системе, с -a — подробные."""
+        if not args:
+            return SYSTEM_NAME
+        if args == ["-a"]:
+            return f"{SYSTEM_NAME} {self.vfs_name} {SYSTEM_VERSION} {MACHINE}"
+        raise ShellError(f"uname: неизвестный аргумент: {args[0]}")
+
+    def cmd_echo(self, args):
+        """Выводит свои аргументы через пробел."""
+        return " ".join(args)
+
+    def cmd_uptime(self, args):
+        """Выводит время работы эмулятора."""
+        if args:
+            raise ShellError("uptime: команда не принимает аргументы")
+        seconds = int(time.monotonic() - self.start_time)
+        minutes = seconds // SECONDS_IN_MINUTE
+        return f"время работы: {minutes} мин {seconds % SECONDS_IN_MINUTE} с"
 
     def cmd_exit(self, args):
         """Завершает работу эмулятора."""

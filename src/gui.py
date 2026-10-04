@@ -6,7 +6,6 @@ from tkinter import scrolledtext
 from errors import ShellError
 from shell import read_script
 
-PROMPT = "$ "
 NOT_SET = "не задан"
 
 
@@ -52,7 +51,7 @@ class App:
         """Обрабатывает нажатие Enter в строке ввода."""
         line = self.entry.get()
         self.entry.delete(0, tk.END)
-        self.print(PROMPT + line)
+        self.print(self.shell.prompt() + line)
         self.run_line(line)
 
     def run_line(self, line):
@@ -78,7 +77,7 @@ class App:
             self.print(f"Ошибка: {error}")
             return
         for number, line in lines:
-            self.print(PROMPT + line)
+            self.print(self.shell.prompt() + line)
             if not self.run_line(line):
                 self.print(f"Скрипт остановлен: ошибка в строке {number}")
                 return
