@@ -8,8 +8,8 @@ from tempfile import TemporaryDirectory
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from errors import ShellError  # noqa: E402
-from vfs import load_vfs, resolve  # noqa: E402
+from errors import ShellError
+from vfs import load_vfs, resolve
 
 
 def make_zip(folder):

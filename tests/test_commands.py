@@ -8,8 +8,8 @@ from tempfile import TemporaryDirectory
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from errors import ShellError  # noqa: E402
-from shell import Shell  # noqa: E402
+from errors import ShellError
+from shell import Shell
 
 
 class TestCommands(unittest.TestCase):

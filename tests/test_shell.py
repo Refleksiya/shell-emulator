@@ -7,7 +7,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from shell import (  # noqa: E402
+from shell import (
     Shell, ShellError, parse, read_script, vfs_name_from_path,
 )
 
