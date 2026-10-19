@@ -5,6 +5,7 @@ import shlex
 
 DEFAULT_VFS_NAME = "vfs"
 MAX_CD_ARGS = 1
+COMMENT = "#"
 
 
 class ShellError(Exception):
@@ -13,20 +14,44 @@ class ShellError(Exception):
 
 def parse(line):
     """Раскрывает переменные окружения ($HOME и т.п.) и делит строку
-    на слова с учётом кавычек."""
+    на слова с учётом кавычек. Всё после # считается комментарием."""
     line = os.path.expandvars(line)
     try:
-        return shlex.split(line)
+        return shlex.split(line, comments=True)
     except ValueError:
         raise ShellError("ошибка разбора: незакрытая кавычка")
+
+
+def vfs_name_from_path(path):
+    """Возвращает имя VFS по пути (имя файла или папки)."""
+    if not path:
+        return DEFAULT_VFS_NAME
+    return os.path.basename(os.path.normpath(path))
+
+
+def read_script(path):
+    """Читает стартовый скрипт. Возвращает список пар
+    (номер строки, строка) без пустых строк и комментариев."""
+    try:
+        with open(path, encoding="utf-8") as file:
+            lines = file.read().splitlines()
+    except OSError:
+        raise ShellError(f"не удалось открыть скрипт: {path}")
+    result = []
+    for number, line in enumerate(lines, start=1):
+        text = line.strip()
+        if text and not text.startswith(COMMENT):
+            result.append((number, text))
+    return result
 
 
 class Shell:
     """Эмулятор оболочки: хранит состояние и выполняет команды."""
 
-    def __init__(self, vfs_name=DEFAULT_VFS_NAME):
-        """Создаёт оболочку с заданным именем VFS."""
-        self.vfs_name = vfs_name
+    def __init__(self, vfs_path=None):
+        """Создаёт оболочку. vfs_path — путь к VFS (может быть None)."""
+        self.vfs_path = vfs_path
+        self.vfs_name = vfs_name_from_path(vfs_path)
         self.running = True
         self.commands = {
             "ls": self.cmd_ls,
