@@ -3,13 +3,12 @@
 import os
 import shlex
 
+from errors import ShellError
+from vfs import Node, ROOT_NAME, load_vfs
+
 DEFAULT_VFS_NAME = "vfs"
 MAX_CD_ARGS = 1
 COMMENT = "#"
-
-
-class ShellError(Exception):
-    """Ошибка выполнения команды (выводится пользователю)."""
 
 
 def parse(line):
@@ -52,12 +51,21 @@ class Shell:
         """Создаёт оболочку. vfs_path — путь к VFS (может быть None)."""
         self.vfs_path = vfs_path
         self.vfs_name = vfs_name_from_path(vfs_path)
+        self.root = Node(ROOT_NAME, True)
+        self.cwd = []
         self.running = True
         self.commands = {
             "ls": self.cmd_ls,
             "cd": self.cmd_cd,
             "exit": self.cmd_exit,
         }
+
+    def load(self):
+        """Загружает VFS в память. Возвращает сообщение о результате."""
+        if not self.vfs_path:
+            return "VFS не задана, используется пустой каталог"
+        self.root = load_vfs(self.vfs_path)
+        return f"VFS загружена: {self.vfs_path}"
 
     def execute(self, line):
         """Выполняет одну строку и возвращает текст вывода."""

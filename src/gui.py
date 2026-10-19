@@ -3,7 +3,8 @@
 import tkinter as tk
 from tkinter import scrolledtext
 
-from shell import ShellError, read_script
+from errors import ShellError
+from shell import read_script
 
 PROMPT = "$ "
 NOT_SET = "не задан"
@@ -25,6 +26,7 @@ class App:
         self.entry.bind("<Return>", self.on_enter)
         self.entry.focus()
         self.print_params()
+        self.load_vfs()
 
     def print(self, text):
         """Добавляет строку текста в поле вывода."""
@@ -36,6 +38,14 @@ class App:
         self.print("Параметры запуска:")
         self.print(f"  VFS: {self.shell.vfs_path or NOT_SET}")
         self.print(f"  Стартовый скрипт: {self.script_path or NOT_SET}")
+        self.print("")
+
+    def load_vfs(self):
+        """Загружает VFS и печатает результат или ошибку."""
+        try:
+            self.print(self.shell.load())
+        except ShellError as error:
+            self.print(f"Ошибка: {error}")
         self.print("")
 
     def on_enter(self, event):
